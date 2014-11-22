@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<history>
+   <processor signature="arm-none-eabi-gcc noversion nomachine -mcpu=cortex-m3 -mthumb -Wall -ffunction-sections -g -O0 -c -DSTM32F100RB -DSTM32F10X_MD_VL -DUSE_STDPERIPH_DRIVER -D__ASSEMBLY__ -I..\..\..\workspace\Clock_Stopwatch\cmsis_boot -I..\..\..\workspace -I..\..\..\workspace\Clock_Stopwatch -I..\..\..\workspace\Clock_Stopwatch\stm_lib\inc -I..\..\..\workspace\Clock_Stopwatch\cmsis -I..\..\..\workspace\Clock_Stopwatch\stm_lib">
+      <target file="stm32f10x_rcc.o" lastModified="149cc93ee42">
+         <source file="..\..\..\stm_lib\src\stm32f10x_rcc.c" lastModified="1493b892e4d"/>
+      </target>
+      <target file="core_cm3.o" lastModified="149cc93ec68">
+         <source file="..\..\..\cmsis\core_cm3.c" lastModified="1493b892e1e"/>
+      </target>
+      <target file="system_stm32f10x.o" lastModified="149cc93ecfc">
+         <source file="..\..\..\cmsis_boot\system_stm32f10x.c" lastModified="1493b892dfd"/>
+      </target>
+      <target file="startup_stm32f10x_md_vl.o" lastModified="149cc93eba6">
+         <source file="..\..\..\cmsis_boot\startup\startup_stm32f10x_md_vl.c" lastModified="149b8391412"/>
+      </target>
+      <target file="main.o" lastModified="149cc93edde">
+         <source file="..\..\..\main.c" lastModified="149ca4d078c"/>
+      </target>
+      <target file="stm32f10x_gpio.o" lastModified="149cc93ed62">
+         <source file="..\..\..\stm_lib\src\stm32f10x_gpio.c" lastModified="1493b892d93"/>
+      </target>
+   </processor>
+</history>
