@@ -45,7 +45,7 @@ typedef struct
 	uint32_t sec; // секунды
 } RTC_Time;
 uint32_t clock_mode, settings_mode, timer_started, timer_cnt, current_address,
-current_setup_numb, seck_result_num;
+current_setup_numb, sec_result_num;
 RTC_Time time = { 0, 0, 0};
 
 //разблокировка доступа к памяти
@@ -120,7 +120,9 @@ void TIM6_DAC_IRQHandler(void)
 void EXTI0_IRQHandler(void) {		 // часы | секундомер
 	 EXTI->PR|=0x01;				//clear flag
 	 clock_mode = !clock_mode;
-
+	 if (!clock_mode) {
+		 timer_cnt = flash_read(PAGE_127);
+	 }
 }
 
 void EXTI1_IRQHandler(void) {		// режим настройки часов/обычный режим | стоп/старт
@@ -155,8 +157,9 @@ void EXTI2_IRQHandler(void) {		// выбор цифры для настройки влево | предыдущие р
 	 GPIOC->BRR = GPIO_Pin_9;
 	 if (clock_mode && settings_mode) {
 		 current_setup_numb++;
-	 } else if (!clock_mode) {
-		 seck_result_num++;
+	 } else if (!clock_mode && sec_result_num < 29) {
+		 sec_result_num++;
+		 timer_cnt = flash_read(PAGE_127 + BYTES*sec_result_num);
 	 }
 }
 
@@ -168,9 +171,10 @@ void EXTI3_IRQHandler(void) {		// выбор цифры для настройки вправо | следующие р
 	 GPIOC->BRR = GPIO_Pin_8;
 	 if (clock_mode && settings_mode) {
 	 		 current_setup_numb--;
-	 	 } else if (!clock_mode) {
-	 		 seck_result_num--;
-	 	 }
+	 } else if (!clock_mode && sec_result_num > 0) {
+ 		sec_result_num--;
+ 		timer_cnt = flash_read(PAGE_127 + BYTES*sec_result_num);
+	 }
 }
 
 void EXTI4_IRQHandler(void) {		// увеличить выбранную единицу времени
@@ -209,7 +213,7 @@ void EXTI4_IRQHandler(void) {		// увеличить выбранную единицу времени
 void EXTI9_5_IRQHandler(void) {		// уменьшить выбранную единицу времени
 	 EXTI->PR|=0x06;
 	 if (clock_mode && settings_mode) {
-	 		 switch(current_setup_numb) {
+	 	switch(current_setup_numb) {
 	 		 case 0:
 	 			 if (time.min != 0) {
 	 				 time.min--;
@@ -295,7 +299,7 @@ void initRTC(void)
 
 int main(void) {
 	GPIO_InitTypeDef PORT;
-	uint32_t temp, mig_cnt, mig_flag;
+	uint32_t temp, digit_temp, mig_cnt, mig_flag;
 
 	RCC->CR |= RCC_CR_CSSON;
 
@@ -354,7 +358,8 @@ int main(void) {
 	timer_cnt = 0;
 	mig_cnt = 0;  			//счетчик для мигания
 	mig_flag = 0;
-	current_setup_numb = 0;
+	current_setup_numb = 0;		//выбранный номер при настройке часов
+	sec_result_num = 0;		//номер показанного результата
 
 	while (1) {
  		if (clock_mode){
@@ -389,6 +394,23 @@ int main(void) {
 			temp = time.hour/10;
 			digit_to_port(temp, D0);
 			delay();
+		} else {
+			temp = timer_cnt;
+			//милискенды, первая цифра
+			digit_temp = temp%10;
+			digit_to_port(digit_temp, D3);
+			//вторая
+			temp = temp/10;
+			digit_temp = temp%10;
+			digit_to_port(digit_temp, D2);
+			//третья
+			temp = temp/10;
+			digit_temp = temp%10;
+			digit_to_port(digit_temp, D1);
+			//четвертая
+			temp = temp/10;
+			digit_temp = temp%10;
+			digit_to_port(digit_temp, D0);
 		}
 	}
 }
