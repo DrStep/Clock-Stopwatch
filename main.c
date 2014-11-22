@@ -98,10 +98,15 @@ void delay(void) {
 }
 
 //Функция выводит в порт нужную цифру
-void digit_to_port (uint8_t digit) {
+void digit_to_port (uint8_t digit, unit32_t num_dig) {
 	uint8_t digitsp[]={DIG0,DIG1,DIG2,DIG3,DIG4,DIG5,DIG6,DIG7,DIG8,DIG9};
+	IND_PORT->ODR &= ~(D0|D1|D2|D3);		//Выключаем все разряды
+	IND_PORT->ODR |= num_dig;				//выбираем нужный разряд
 	IND_PORT->ODR &= ~DIG8; //Выключаем все сегменты
 	IND_PORT->ODR |= digitsp[digit]; //Зажигаем нужные
+	if ((clock_mode && num_dig == D1) || (!clock_mode && num_dig == D2)) {	//ставим точку, где надо
+		IND_PORT->ODR |= SEG_DT;
+	}
 }
 
 //прерывания таймера
@@ -127,6 +132,7 @@ void EXTI1_IRQHandler(void) {		// режим настройки часов/обычный режим | стоп/ста
 		 timer_started = !timer_started;
 		 if (timer_started) {
 			 TIM6->CR1 |= TIM_CR1_CEN;		//запуск таймера
+			 timer_cnt = 0;					//сброс таймера
 		 } else {
 			 TIM6->CR1 &= ~TIM_CR1_CEN;		//выключение таймера
 			 for (i=0; i<29; i++) {			//сдвигаем 29 переменных на 1 вправо, в освободившуюся ячейку пишем новый результат
@@ -137,8 +143,6 @@ void EXTI1_IRQHandler(void) {		// режим настройки часов/обычный режим | стоп/ста
 			 for (i=1; i<30; i++) {
 			 	 flash_write(PAGE_127 + BYTES*i, result[i]);
 			 }
-			 //ВЫВОД РЕЗУЛТА
-			 timer_cnt = 0;
 		 }
 	 }
 }
@@ -355,11 +359,7 @@ int main(void) {
 	while (1) {
  		if (clock_mode){
 
-			//Выключаем все разряды
-			IND_PORT->ODR &= ~(D0|D1|D2|D3);
-			//Включаем нулевой разряд индикатора
-			IND_PORT->ODR |= D3;
-			//Выводим цифру в нулевой разряд
+			//Выводим цифру в нулевой разряд, единицы минут
 			temp = time.min%10;
 			if (settings_mode && current_setup_numb == 0) {
 				if (mig_cnt != 0x5000) {
@@ -368,39 +368,26 @@ int main(void) {
 					mig_flag = !mig_flag;
 				}
 				if (!mig_flag) {
-					digit_to_port(temp);
+					digit_to_port(temp, D3);
 				}
 			} else {
-				digit_to_port(temp);
+				digit_to_port(temp, D3);
 			}
 			delay();
 
-			IND_PORT->ODR &= ~(D0|D1|D2|D3);
-			IND_PORT->ODR |= D2;
-			if (!clock_mode) {
-				IND_PORT->ODR |= SEG_DT;
-			} else {
-				IND_PORT->ODR &= ~SEG_DT;
-			}
+			//десятки минут
 			temp = time.min/10;
-			digit_to_port(temp);
+			digit_to_port(temp, D2);
 			delay();
 
-			IND_PORT->ODR &= ~(D0|D1|D2|D3);
-			IND_PORT->ODR |= D1;
+			//единицы часов
 			temp = time.hour%10;
-			if (clock_mode) {
-				IND_PORT->ODR |= SEG_DT;
-			} else {
-				IND_PORT->ODR &= ~SEG_DT;
-			}
-			digit_to_port(temp);
+			digit_to_port(temp, D1);
 			delay();
 
-			IND_PORT->ODR &= ~(D0|D1|D2|D3);
-			IND_PORT->ODR |= D0;
+			//десятки часов
 			temp = time.hour/10;
-			digit_to_port(temp);
+			digit_to_port(temp, D0);
 			delay();
 		}
 	}
