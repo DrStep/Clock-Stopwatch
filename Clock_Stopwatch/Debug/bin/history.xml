@@ -1,12 +1,12 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <history>
    <processor signature="arm-none-eabi-gcc -mcpu=cortex-m3 -mthumb -g -nostartfiles -Map=Clock_Stopwatch.map -O0 --gc-sections -LC:\CooCox\CoIDE\configuration\ProgramData\Clock_Stopwatch -TC:\CooCox\CoIDE\configuration\ProgramData\Clock_Stopwatch/link.ld -g">
-      <target file="Clock_Stopwatch.elf" lastModified="149cc93f023">
+      <target file="Clock_Stopwatch.elf" lastModified="149dc854f30">
          <source file="..\obj\startup_stm32f10x_md_vl.o" lastModified="149cc93eba6"/>
          <source file="..\obj\core_cm3.o" lastModified="149cc93ec68"/>
          <source file="..\obj\system_stm32f10x.o" lastModified="149cc93ecfc"/>
          <source file="..\obj\stm32f10x_gpio.o" lastModified="149cc93ed62"/>
-         <source file="..\obj\main.o" lastModified="149cc93edde"/>
+         <source file="..\obj\main.o" lastModified="149dc854d4b"/>
          <source file="..\obj\stm32f10x_rcc.o" lastModified="149cc93ee42"/>
       </target>
    </processor>

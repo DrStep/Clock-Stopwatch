@@ -6,6 +6,9 @@ timer_started       0x4               ..\obj\main.o
 clock_mode          0x4               ..\obj\main.o
 settings_mode       0x4               ..\obj\main.o
 current_setup_numb  0x4               ..\obj\main.o
+mig_cnt             0x4               ..\obj\main.o
+sec_result_num      0x4               ..\obj\main.o
+drebezg_flag        0x4               ..\obj\main.o
 current_address     0x4               ..\obj\main.o
 timer_cnt           0x4               ..\obj\main.o
 
@@ -99,6 +102,8 @@ Discarded input sections
                 0x00000000       0x1c ..\obj\stm32f10x_gpio.o
  .text          0x00000000        0x0 ..\obj\main.o
  .data          0x00000000        0x0 ..\obj\main.o
+ .text.antidrebezg
+                0x00000000       0x3c ..\obj\main.o
  .text          0x00000000        0x0 ..\obj\stm32f10x_rcc.o
  .data          0x00000000       0x14 ..\obj\stm32f10x_rcc.o
  .bss           0x00000000        0x0 ..\obj\stm32f10x_rcc.o
@@ -172,7 +177,7 @@ Linker script and memory map
 
                 0x20002000                _eram = 0x20002000
 
-.text           0x08000000      0xf70
+.text           0x08000000     0x15b8
  *(.isr_vector)
  .isr_vector    0x08000000      0x124 ..\obj\startup_stm32f10x_md_vl.o
                 0x08000000                g_pfnVectors
@@ -207,7 +212,6 @@ Linker script and memory map
                 0x0800018c                DMA1_Channel1_IRQHandler
                 0x0800018c                CEC_IRQHandler
                 0x0800018c                EXTI15_10_IRQHandler
-                0x0800018c                TIM7_IRQHandler
                 0x0800018c                SPI2_IRQHandler
                 0x0800018c                MemManage_Handler
                 0x0800018c                SVC_Handler
@@ -250,59 +254,62 @@ Linker script and memory map
                 0x08000624       0x24 ..\obj\main.o
                 0x08000624                flash_ready
  .text.flash_erase_page
-                0x08000648       0x4c ..\obj\main.o
+                0x08000648       0x54 ..\obj\main.o
                 0x08000648                flash_erase_page
  .text.flash_write
-                0x08000694       0x7c ..\obj\main.o
-                0x08000694                flash_write
+                0x0800069c       0x7c ..\obj\main.o
+                0x0800069c                flash_write
  .text.flash_read
-                0x08000710       0x18 ..\obj\main.o
-                0x08000710                flash_read
- .text.delay    0x08000728       0x28 ..\obj\main.o
-                0x08000728                delay
+                0x08000718       0x18 ..\obj\main.o
+                0x08000718                flash_read
+ .text.delay    0x08000730       0x28 ..\obj\main.o
+                0x08000730                delay
  .text.digit_to_port
-                0x08000750       0x4c ..\obj\main.o
-                0x08000750                digit_to_port
+                0x08000758       0x98 ..\obj\main.o
+                0x08000758                digit_to_port
  .text.TIM6_DAC_IRQHandler
-                0x0800079c       0x30 ..\obj\main.o
-                0x0800079c                TIM6_DAC_IRQHandler
+                0x080007f0       0x30 ..\obj\main.o
+                0x080007f0                TIM6_DAC_IRQHandler
+ .text.TIM7_IRQHandler
+                0x08000820       0x3c ..\obj\main.o
+                0x08000820                TIM7_IRQHandler
  .text.EXTI0_IRQHandler
-                0x080007cc       0x30 ..\obj\main.o
-                0x080007cc                EXTI0_IRQHandler
+                0x0800085c       0x48 ..\obj\main.o
+                0x0800085c                EXTI0_IRQHandler
  .text.EXTI1_IRQHandler
-                0x080007fc      0x11c ..\obj\main.o
-                0x080007fc                EXTI1_IRQHandler
+                0x080008a4      0x15c ..\obj\main.o
+                0x080008a4                EXTI1_IRQHandler
  .text.EXTI2_IRQHandler
-                0x08000918       0x28 ..\obj\main.o
-                0x08000918                EXTI2_IRQHandler
+                0x08000a00       0xc8 ..\obj\main.o
+                0x08000a00                EXTI2_IRQHandler
  .text.EXTI3_IRQHandler
-                0x08000940       0x28 ..\obj\main.o
-                0x08000940                EXTI3_IRQHandler
+                0x08000ac8       0xcc ..\obj\main.o
+                0x08000ac8                EXTI3_IRQHandler
  .text.EXTI4_IRQHandler
-                0x08000968       0x28 ..\obj\main.o
-                0x08000968                EXTI4_IRQHandler
+                0x08000b94      0x128 ..\obj\main.o
+                0x08000b94                EXTI4_IRQHandler
  .text.EXTI9_5_IRQHandler
-                0x08000990       0x28 ..\obj\main.o
-                0x08000990                EXTI9_5_IRQHandler
+                0x08000cbc      0x10c ..\obj\main.o
+                0x08000cbc                EXTI9_5_IRQHandler
  .text.RTC_IRQHandler
-                0x080009b8       0x78 ..\obj\main.o
-                0x080009b8                RTC_IRQHandler
- .text.initRTC  0x08000a30      0x11c ..\obj\main.o
-                0x08000a30                initRTC
- .text.main     0x08000b4c      0x2c4 ..\obj\main.o
-                0x08000b4c                main
+                0x08000dc8       0x78 ..\obj\main.o
+                0x08000dc8                RTC_IRQHandler
+ .text.initRTC  0x08000e40      0x11c ..\obj\main.o
+                0x08000e40                initRTC
+ .text.main     0x08000f5c      0x4fc ..\obj\main.o
+                0x08000f5c                main
  .text.RCC_LSEConfig
-                0x08000e10       0x48 ..\obj\stm32f10x_rcc.o
-                0x08000e10                RCC_LSEConfig
+                0x08001458       0x48 ..\obj\stm32f10x_rcc.o
+                0x08001458                RCC_LSEConfig
  .text.RCC_APB2PeriphClockCmd
-                0x08000e58       0x44 ..\obj\stm32f10x_rcc.o
-                0x08000e58                RCC_APB2PeriphClockCmd
+                0x080014a0       0x44 ..\obj\stm32f10x_rcc.o
+                0x080014a0                RCC_APB2PeriphClockCmd
  .text.RCC_APB1PeriphClockCmd
-                0x08000e9c       0x44 ..\obj\stm32f10x_rcc.o
-                0x08000e9c                RCC_APB1PeriphClockCmd
+                0x080014e4       0x44 ..\obj\stm32f10x_rcc.o
+                0x080014e4                RCC_APB1PeriphClockCmd
  .text.RCC_GetFlagStatus
-                0x08000ee0       0x84 ..\obj\stm32f10x_rcc.o
-                0x08000ee0                RCC_GetFlagStatus
+                0x08001528       0x84 ..\obj\stm32f10x_rcc.o
+                0x08001528                RCC_GetFlagStatus
  *(.init)
  *(.fini)
  *crtbegin.o(.ctors)
@@ -316,32 +323,32 @@ Linker script and memory map
  *(SORT(.dtors.*))
  *(.dtors)
  *(.rodata*)
- .rodata        0x08000f64        0xc ..\obj\main.o
+ .rodata        0x080015ac        0xc ..\obj\main.o
  *(.eh_fram e*)
 
-.glue_7         0x08000f70        0x0
+.glue_7         0x080015b8        0x0
  .glue_7        0x00000000        0x0 linker stubs
 
-.glue_7t        0x08000f70        0x0
+.glue_7t        0x080015b8        0x0
  .glue_7t       0x00000000        0x0 linker stubs
 
-.vfp11_veneer   0x08000f70        0x0
+.vfp11_veneer   0x080015b8        0x0
  .vfp11_veneer  0x00000000        0x0 linker stubs
 
-.v4_bx          0x08000f70        0x0
+.v4_bx          0x080015b8        0x0
  .v4_bx         0x00000000        0x0 linker stubs
 
 .ARM.extab
  *(.ARM.extab* .gnu.linkonce.armextab.*)
-                0x08000f70                __exidx_start = .
+                0x080015b8                __exidx_start = .
 
 .ARM.exidx
  *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-                0x08000f70                __exidx_end = .
-                0x08000f70                __etext = .
-                0x08000f70                _sidata = __etext
+                0x080015b8                __exidx_end = .
+                0x080015b8                __etext = .
+                0x080015b8                _sidata = __etext
 
-.data           0x20000000        0x0 load address 0x08000f70
+.data           0x20000000        0x0 load address 0x080015b8
                 0x20000000                __data_start__ = .
                 0x20000000                _sdata = __data_start__
  *(vtable)
@@ -365,7 +372,7 @@ Linker script and memory map
                 0x20000000                __data_end__ = .
                 0x20000000                _edata = __data_end__
 
-.bss            0x20000000       0x24
+.bss            0x20000000       0x30
                 0x20000000                . = ALIGN (0x4)
                 0x20000000                __bss_start__ = .
                 0x20000000                _sbss = __bss_start__
@@ -373,32 +380,34 @@ Linker script and memory map
  .bss           0x20000000        0xc ..\obj\main.o
                 0x20000000                time
  *(COMMON)
- COMMON         0x2000000c       0x18 ..\obj\main.o
+ COMMON         0x2000000c       0x24 ..\obj\main.o
                 0x2000000c                timer_started
                 0x20000010                clock_mode
                 0x20000014                settings_mode
                 0x20000018                current_setup_numb
-                0x2000001c                current_address
-                0x20000020                timer_cnt
-                0x20000024                . = ALIGN (0x4)
-                0x20000024                __bss_end__ = .
-                0x20000024                _ebss = __bss_end__
+                0x2000001c                mig_cnt
+                0x20000020                sec_result_num
+                0x20000024                drebezg_flag
+                0x20000028                current_address
+                0x2000002c                timer_cnt
+                0x20000030                . = ALIGN (0x4)
+                0x20000030                __bss_end__ = .
+                0x20000030                _ebss = __bss_end__
 
-.heap           0x20000024        0x0
-                0x20000024                __end__ = .
-                0x20000024                _end = __end__
-                0x20000024                end = __end__
+.heap           0x20000030        0x0
+                0x20000030                __end__ = .
+                0x20000030                _end = __end__
+                0x20000030                end = __end__
  *(.heap*)
-                0x20000024                __HeapLimit = .
+                0x20000030                __HeapLimit = .
 
-.co_stack       0x20000024      0x404
-                0x20000028                . = ALIGN (0x8)
- *fill*         0x20000024        0x4 00
+.co_stack       0x20000030      0x400
+                0x20000030                . = ALIGN (0x8)
  *(.co_stack .co_stack.*)
- .co_stack      0x20000028      0x400 ..\obj\startup_stm32f10x_md_vl.o
-                0x20000028                pulStack
+ .co_stack      0x20000030      0x400 ..\obj\startup_stm32f10x_md_vl.o
+                0x20000030                pulStack
                 0x20002000                __StackTop = 0x20002000
-                0x20001bfc                __StackLimit = (__StackTop - SIZEOF (.co_stack))
+                0x20001c00                __StackLimit = (__StackTop - SIZEOF (.co_stack))
                 0x20002000                PROVIDE (__stack, __StackTop)
                 0x00000001                ASSERT ((__StackLimit >= __HeapLimit), region ram  overflowed with stack)
 LOAD ..\obj\startup_stm32f10x_md_vl.o
@@ -413,40 +422,40 @@ LOAD c:/program files (x86)/coocox/arm-2011.03-coocox/bin/../lib/gcc/arm-none-ea
 END GROUP
 OUTPUT(Clock_Stopwatch.elf elf32-littlearm)
 
-.debug_abbrev   0x00000000      0x824
+.debug_abbrev   0x00000000      0x861
  .debug_abbrev  0x00000000       0xa3 ..\obj\startup_stm32f10x_md_vl.o
  .debug_abbrev  0x000000a3       0xd5 ..\obj\core_cm3.o
  .debug_abbrev  0x00000178      0x17e ..\obj\system_stm32f10x.o
  .debug_abbrev  0x000002f6      0x1a4 ..\obj\stm32f10x_gpio.o
- .debug_abbrev  0x0000049a      0x1f9 ..\obj\main.o
- .debug_abbrev  0x00000693      0x191 ..\obj\stm32f10x_rcc.o
+ .debug_abbrev  0x0000049a      0x236 ..\obj\main.o
+ .debug_abbrev  0x000006d0      0x191 ..\obj\stm32f10x_rcc.o
 
-.debug_info     0x00000000     0x2edb
+.debug_info     0x00000000     0x2f8c
  .debug_info    0x00000000      0x131 ..\obj\startup_stm32f10x_md_vl.o
  .debug_info    0x00000131      0x548 ..\obj\core_cm3.o
  .debug_info    0x00000679      0x433 ..\obj\system_stm32f10x.o
  .debug_info    0x00000aac      0x723 ..\obj\stm32f10x_gpio.o
- .debug_info    0x000011cf     0x1396 ..\obj\main.o
- .debug_info    0x00002565      0x976 ..\obj\stm32f10x_rcc.o
+ .debug_info    0x000011cf     0x1447 ..\obj\main.o
+ .debug_info    0x00002616      0x976 ..\obj\stm32f10x_rcc.o
 
-.debug_line     0x00000000     0x116c
+.debug_line     0x00000000     0x128b
  .debug_line    0x00000000       0xaa ..\obj\startup_stm32f10x_md_vl.o
  .debug_line    0x000000aa      0x28d ..\obj\core_cm3.o
  .debug_line    0x00000337      0x223 ..\obj\system_stm32f10x.o
  .debug_line    0x0000055a      0x377 ..\obj\stm32f10x_gpio.o
- .debug_line    0x000008d1      0x3fe ..\obj\main.o
- .debug_line    0x00000ccf      0x49d ..\obj\stm32f10x_rcc.o
+ .debug_line    0x000008d1      0x51d ..\obj\main.o
+ .debug_line    0x00000dee      0x49d ..\obj\stm32f10x_rcc.o
 
-.debug_loc      0x00000000     0x13ba
+.debug_loc      0x00000000     0x141e
  .debug_loc     0x00000000       0x64 ..\obj\startup_stm32f10x_md_vl.o
  .debug_loc     0x00000064      0x3f0 ..\obj\core_cm3.o
  .debug_loc     0x00000454       0xc8 ..\obj\system_stm32f10x.o
  .debug_loc     0x0000051c      0x3e4 ..\obj\stm32f10x_gpio.o
- .debug_loc     0x00000900      0x3a6 ..\obj\main.o
- .debug_loc     0x00000ca6      0x714 ..\obj\stm32f10x_rcc.o
+ .debug_loc     0x00000900      0x40a ..\obj\main.o
+ .debug_loc     0x00000d0a      0x714 ..\obj\stm32f10x_rcc.o
 
 .debug_pubnames
-                0x00000000      0x842
+                0x00000000      0x896
  .debug_pubnames
                 0x00000000       0x4a ..\obj\startup_stm32f10x_md_vl.o
  .debug_pubnames
@@ -456,11 +465,11 @@ OUTPUT(Clock_Stopwatch.elf elf32-littlearm)
  .debug_pubnames
                 0x00000204      0x19d ..\obj\stm32f10x_gpio.o
  .debug_pubnames
-                0x000003a1      0x1c7 ..\obj\main.o
+                0x000003a1      0x21b ..\obj\main.o
  .debug_pubnames
-                0x00000568      0x2da ..\obj\stm32f10x_rcc.o
+                0x000005bc      0x2da ..\obj\stm32f10x_rcc.o
 
-.debug_aranges  0x00000000      0x3a0
+.debug_aranges  0x00000000      0x3b0
  .debug_aranges
                 0x00000000       0x28 ..\obj\startup_stm32f10x_md_vl.o
  .debug_aranges
@@ -470,19 +479,19 @@ OUTPUT(Clock_Stopwatch.elf elf32-littlearm)
  .debug_aranges
                 0x00000128       0xa8 ..\obj\stm32f10x_gpio.o
  .debug_aranges
-                0x000001d0       0xb0 ..\obj\main.o
+                0x000001d0       0xc0 ..\obj\main.o
  .debug_aranges
-                0x00000280      0x120 ..\obj\stm32f10x_rcc.o
+                0x00000290      0x120 ..\obj\stm32f10x_rcc.o
 
-.debug_ranges   0x00000000      0x340
+.debug_ranges   0x00000000      0x350
  .debug_ranges  0x00000000       0x18 ..\obj\startup_stm32f10x_md_vl.o
  .debug_ranges  0x00000018       0xb8 ..\obj\core_cm3.o
  .debug_ranges  0x000000d0       0x28 ..\obj\system_stm32f10x.o
  .debug_ranges  0x000000f8       0x98 ..\obj\stm32f10x_gpio.o
- .debug_ranges  0x00000190       0xa0 ..\obj\main.o
- .debug_ranges  0x00000230      0x110 ..\obj\stm32f10x_rcc.o
+ .debug_ranges  0x00000190       0xb0 ..\obj\main.o
+ .debug_ranges  0x00000240      0x110 ..\obj\stm32f10x_rcc.o
 
-.debug_str      0x00000000     0x1442
+.debug_str      0x00000000     0x1488
  .debug_str     0x00000000       0xc4 ..\obj\startup_stm32f10x_md_vl.o
                                  0xe3 (size before relaxing)
  .debug_str     0x000000c4      0x1de ..\obj\core_cm3.o
@@ -491,9 +500,9 @@ OUTPUT(Clock_Stopwatch.elf elf32-littlearm)
                                 0x236 (size before relaxing)
  .debug_str     0x0000041a      0x3ba ..\obj\stm32f10x_gpio.o
                                 0x47b (size before relaxing)
- .debug_str     0x000007d4      0x84c ..\obj\main.o
-                                0xaa7 (size before relaxing)
- .debug_str     0x00001020      0x422 ..\obj\stm32f10x_rcc.o
+ .debug_str     0x000007d4      0x892 ..\obj\main.o
+                                0xaf2 (size before relaxing)
+ .debug_str     0x00001066      0x422 ..\obj\stm32f10x_rcc.o
                                 0x5cf (size before relaxing)
 
 .comment        0x00000000       0x11
@@ -520,13 +529,13 @@ OUTPUT(Clock_Stopwatch.elf elf32-littlearm)
  .ARM.attributes
                 0x000000f5       0x31 ..\obj\stm32f10x_rcc.o
 
-.debug_frame    0x00000000      0xb08
+.debug_frame    0x00000000      0xb4c
  .debug_frame   0x00000000       0x48 ..\obj\startup_stm32f10x_md_vl.o
  .debug_frame   0x00000048      0x280 ..\obj\core_cm3.o
  .debug_frame   0x000002c8       0x80 ..\obj\system_stm32f10x.o
  .debug_frame   0x00000348      0x210 ..\obj\stm32f10x_gpio.o
- .debug_frame   0x00000558      0x20c ..\obj\main.o
- .debug_frame   0x00000764      0x3a4 ..\obj\stm32f10x_rcc.o
+ .debug_frame   0x00000558      0x250 ..\obj\main.o
+ .debug_frame   0x000007a8      0x3a4 ..\obj\stm32f10x_rcc.o
 
 .debug_pubtypes
                 0x00000000      0x334

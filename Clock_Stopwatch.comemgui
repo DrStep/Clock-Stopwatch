@@ -1,2 +1,2 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<MBs>&#x0A;<MemoryBroser ComboItemsValue="0xffffffff9;0x08000a26;0xfffffff9;" FocuseTabIndex="0" TabsValue="" TextValue="0xffffff9c"/>&#x0A;</MBs>
+<MBs>&#x0A;<MemoryBroser ComboItemsValue="0x001FC00;0x0001FC00;" FocuseTabIndex="0" TabsValue="" TextValue="0x1fc00"/>&#x0A;</MBs>

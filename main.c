@@ -26,7 +26,7 @@
 #define SEG_G GPIO_Pin_6
 #define SEG_DT GPIO_Pin_7
 //Собираем цифры из сегментов
-#define DIG0 ( SEG_A | SEG_B | SEG_C | SEG_D | SEG_E | SEG_F )
+#define DIG0 ( SEG_A | SEG_B | SEG_C | SEG_D | SEG_E | SEG_F)
 #define DIG1 ( SEG_B | SEG_C )
 #define DIG2 ( SEG_A | SEG_B | SEG_G | SEG_E | SEG_D )
 #define DIG3 ( SEG_A | SEG_B | SEG_G | SEG_C | SEG_D )
@@ -38,216 +38,263 @@
 #define DIG9 ( SEG_A | SEG_B | SEG_C | SEG_D | SEG_F | SEG_G)
 #define ALL_PINS (DIG8 | D0 | D1 | D2 | D3 )
 
-typedef struct
-{
+typedef struct {
 	uint32_t hour; // часы
 	uint32_t min; // минуты
 	uint32_t sec; // секунды
 } RTC_Time;
 uint32_t clock_mode, settings_mode, timer_started, timer_cnt, current_address,
-current_setup_numb, sec_result_num;
-RTC_Time time = { 0, 0, 0};
+		current_setup_numb, sec_result_num, mig_cnt, drebezg_flag;
+RTC_Time time = { 0, 0, 0 };
 
 //разблокировка доступа к памяти
 void flash_unlock(void) {
-  FLASH->KEYR = FLASH_KEY1;
-  FLASH->KEYR = FLASH_KEY2;
+	FLASH->KEYR = FLASH_KEY1;
+	FLASH->KEYR = FLASH_KEY2;
 }
 //блокировка доступа к памяти
 void flash_lock() {
-  FLASH->CR |= FLASH_CR_LOCK;
+	FLASH->CR |= FLASH_CR_LOCK;
 }
 
 //Функция возврщает true когда можно стирать или писать память.
 uint8_t flash_ready(void) {
-  return !(FLASH->SR & FLASH_SR_BSY);
+	return !(FLASH->SR & FLASH_SR_BSY);
 }
 
 //Функция стирает одну страницу. В качестве адреса можно использовать любой
 //принадлежащий диапазону адресов той странице которую нужно очистить.
 void flash_erase_page(uint32_t address) {
-  FLASH->CR|= FLASH_CR_PER; //Устанавливаем бит стирания одной страницы
-  FLASH->AR = address; // Задаем её адрес
-  FLASH->CR|= FLASH_CR_STRT; // Запускаем стирание
-  while(!flash_ready());  //Ждем пока страница сотрется.
-  FLASH->CR&= ~FLASH_CR_PER; //Сбрасываем бит обратно
+	flash_unlock();
+	FLASH->CR |= FLASH_CR_PER; //Устанавливаем бит стирания одной страницы
+	FLASH->AR = address; // Задаем её адрес
+	FLASH->CR |= FLASH_CR_STRT; // Запускаем стирание
+	while (!flash_ready())
+		; //Ждем пока страница сотрется.
+	FLASH->CR &= ~FLASH_CR_PER; //Сбрасываем бит обратно
+	flash_lock();
 }
 
 //запись в память
-void flash_write(uint32_t address,uint32_t data) {
-  flash_unlock();
-  FLASH->CR |= FLASH_CR_PG; //Разрешаем программирование флеша
-  while(!flash_ready()); //Ожидаем готовности флеша к записи
-  *(__IO uint16_t*)address = (uint16_t)data; //Пишем младшие 2 бата
-  while(!flash_ready());
-  address+=2;
-  data>>=16;
-  *(__IO uint16_t*)address = (uint16_t)data; //Пишем старшие 2 байта
-  while(!flash_ready());
-  FLASH->CR &= ~(FLASH_CR_PG); //Запрещаем программирование флеша
-  flash_lock();
+void flash_write(uint32_t address, uint32_t data) {
+	flash_unlock();
+	FLASH->CR |= FLASH_CR_PG; //Разрешаем программирование флеша
+	while (!flash_ready())
+		; //Ожидаем готовности флеша к записи
+	*(__IO uint16_t*) address = (uint16_t) data; //Пишем младшие 2 бата
+	while (!flash_ready())
+		;
+	address += 2;
+	data >>= 16;
+	*(__IO uint16_t*) address = (uint16_t) data; //Пишем старшие 2 байта
+	while (!flash_ready())
+		;
+	FLASH->CR &= ~(FLASH_CR_PG); //Запрещаем программирование флеша
+	flash_lock();
 }
 
 uint32_t flash_read(uint32_t address) {
-  return (*(__IO uint32_t*) address);
+	return (*(__IO uint32_t*) address);
 }
 
 void delay(void) {
 	volatile uint32_t i;
-	for (i=0; i != 0x1000; i++);
+	for (i = 0; i != 0x1000; i++)
+		;
+}
+
+uint32_t antidrebezg(void) {
+	IND_PORT->ODR &= ~(D0 | D1 | D2 | D3);
+	volatile uint32_t i;
+	for (i = 0; i != 0x0003; i++)
+		delay();
 }
 
 //Функция выводит в порт нужную цифру
-void digit_to_port (uint8_t digit, unit32_t num_dig) {
-	uint8_t digitsp[]={DIG0,DIG1,DIG2,DIG3,DIG4,DIG5,DIG6,DIG7,DIG8,DIG9};
-	IND_PORT->ODR &= ~(D0|D1|D2|D3);		//Выключаем все разряды
-	IND_PORT->ODR |= num_dig;				//выбираем нужный разряд
+void digit_to_port(uint8_t digit, uint32_t num_dig) {
+	uint8_t digitsp[] = { DIG0, DIG1, DIG2, DIG3, DIG4, DIG5, DIG6, DIG7, DIG8,
+			DIG9 };
+	IND_PORT->ODR &= ~(D0 | D1 | D2 | D3); //Выключаем все разряды
+	IND_PORT->ODR |= num_dig; //выбираем нужный разряд
 	IND_PORT->ODR &= ~DIG8; //Выключаем все сегменты
 	IND_PORT->ODR |= digitsp[digit]; //Зажигаем нужные
-	if ((clock_mode && num_dig == D1) || (!clock_mode && num_dig == D2)) {	//ставим точку, где надо
+	if ((clock_mode && num_dig == D1) || (!clock_mode && num_dig == D2)) { //ставим точку, где надо
 		IND_PORT->ODR |= SEG_DT;
 	}
 }
 
 //прерывания таймера
-void TIM6_DAC_IRQHandler(void)
-{
+void TIM6_DAC_IRQHandler(void) {
 	++timer_cnt;
 	TIM6->SR &= ~TIM_SR_UIF; //Сбрасываем флаг UIF
 }
 
+void TIM7_IRQHandler(void) {
+	drebezg_flag = 0;
+	TIM7->SR &= ~TIM_SR_UIF; //Сбрасываем флаг UIF
+	TIM7->CR1 &= ~TIM_CR1_CEN;
+}
+
 //прерывания кнопок
-void EXTI0_IRQHandler(void) {		 // часы | секундомер
-	 EXTI->PR|=0x01;				//clear flag
-	 clock_mode = !clock_mode;
-	 if (!clock_mode) {
-		 timer_cnt = flash_read(PAGE_127);
-	 }
+void EXTI0_IRQHandler(void) { // часы | секундомер
+	EXTI->PR |= 0x01; //clear flag
+	clock_mode = !clock_mode;
+	if (!clock_mode) {
+		timer_cnt = flash_read(PAGE_127);
+	}
 }
 
-void EXTI1_IRQHandler(void) {		// режим настройки часов/обычный режим | стоп/старт
+void EXTI1_IRQHandler(void) { // режим настройки часов/обычный режим | стоп/старт
 	uint32_t i, result[29];
-	 EXTI->PR|=0x02;
-	 if (clock_mode){
-		 settings_mode = !settings_mode;
-	 } else {
-		 timer_started = !timer_started;
-		 if (timer_started) {
-			 TIM6->CR1 |= TIM_CR1_CEN;		//запуск таймера
-			 timer_cnt = 0;					//сброс таймера
-		 } else {
-			 TIM6->CR1 &= ~TIM_CR1_CEN;		//выключение таймера
-			 for (i=0; i<29; i++) {			//сдвигаем 29 переменных на 1 вправо, в освободившуюся ячейку пишем новый результат
-				 result[i] = flash_read(PAGE_127 + BYTES*i);
-			 }
-			 flash_erase_page(PAGE_127);
-			 flash_write(PAGE_127, timer_cnt);
-			 for (i=1; i<30; i++) {
-			 	 flash_write(PAGE_127 + BYTES*i, result[i]);
-			 }
-		 }
-	 }
+	EXTI->PR |= 0x02;
+	//убираем дребезг
+	if (drebezg_flag) {
+		return;
+	}
+	drebezg_flag = 1;
+	TIM7->CR1 |= TIM_CR1_CEN;
+
+	if (clock_mode) {
+		settings_mode = !settings_mode;
+		mig_cnt = 0;
+	} else {
+		timer_started = !timer_started;
+		if (timer_started) {
+			TIM6->CR1 |= TIM_CR1_CEN; //запуск таймера
+			timer_cnt = 0; //сброс таймера
+		} else {
+			TIM6->CR1 &= ~TIM_CR1_CEN; //выключение таймера
+			for (i = 0; i < 29; i++) { //сдвигаем 29 переменных на 1 вправо, в освободившуюся ячейку пишем новый результат
+				result[i] = flash_read(PAGE_127 + BYTES * i);
+			}
+			flash_erase_page(PAGE_127);
+			flash_write(PAGE_127, timer_cnt);
+			for (i = 1; i < 30; i++) {
+				flash_write(PAGE_127 + BYTES * i, result[i-1]);
+			}
+		}
+	}
 }
 
-void EXTI2_IRQHandler(void) {		// выбор цифры для настройки влево | предыдущие результаты
-	 EXTI->PR|=0x03;
-	 GPIOC->BSRR = GPIO_Pin_9;		//моргаем одним светодиодом, чтобы показать, что листаем результаты назад
-	 delay();
-	 delay();
-	 GPIOC->BRR = GPIO_Pin_9;
-	 if (clock_mode && settings_mode) {
-		 current_setup_numb++;
-	 } else if (!clock_mode && sec_result_num < 29) {
-		 sec_result_num++;
-		 timer_cnt = flash_read(PAGE_127 + BYTES*sec_result_num);
-	 }
+void EXTI2_IRQHandler(void) { // выбор цифры для настройки влево | предыдущие результаты
+	EXTI->PR |= 0x03;
+	GPIOC->BSRR = GPIO_Pin_9; //моргаем одним светодиодом, чтобы показать, что листаем результаты назад
+	if (drebezg_flag) {
+		return;
+	}
+	drebezg_flag = 1;
+	TIM7->CR1 |= TIM_CR1_CEN;
+
+	GPIOC->BRR = GPIO_Pin_9;
+	if (clock_mode && settings_mode && current_setup_numb < 3) {
+		current_setup_numb++;
+	} else if (!clock_mode && sec_result_num < 29) {
+		sec_result_num++;
+		timer_cnt = flash_read(PAGE_127 + BYTES * sec_result_num);
+	}
 }
 
-void EXTI3_IRQHandler(void) {		// выбор цифры для настройки вправо | следующие результаты
-	 EXTI->PR|=0x04;
-	 GPIOC->BSRR = GPIO_Pin_8;		//моргаем другим светодиодом, чтобы показать, что листаем результаты вперед
-	 delay();
-	 delay();
-	 GPIOC->BRR = GPIO_Pin_8;
-	 if (clock_mode && settings_mode) {
-	 		 current_setup_numb--;
-	 } else if (!clock_mode && sec_result_num > 0) {
- 		sec_result_num--;
- 		timer_cnt = flash_read(PAGE_127 + BYTES*sec_result_num);
-	 }
+void EXTI3_IRQHandler(void) { // выбор цифры для настройки вправо | следующие результаты
+	EXTI->PR |= 0x04;
+	GPIOC->BSRR = GPIO_Pin_8; //моргаем другим светодиодом, чтобы показать, что листаем результаты вперед
+	delay();
+	GPIOC->BRR = GPIO_Pin_8;
+	if (drebezg_flag) {
+		return;
+	}
+	drebezg_flag = 1;
+	TIM7->CR1 |= TIM_CR1_CEN;
+
+	if (clock_mode && settings_mode && current_setup_numb > 0) {
+		current_setup_numb--;
+	} else if (!clock_mode && sec_result_num > 0) {
+		sec_result_num--;
+		timer_cnt = flash_read(PAGE_127 + BYTES * sec_result_num);
+	}
 }
 
-void EXTI4_IRQHandler(void) {		// увеличить выбранную единицу времени
-	 EXTI->PR|=0x05;
-	 if (clock_mode && settings_mode) {
-		 switch(current_setup_numb) {
-		 case 0:
-			 time.min++;
-			 if (time.min == 60) {
-				 time.min = 0;
-			 }
-			 break;
-		 case 1:
-			 if (time.min < 50) {
-				 time.min +=10;
-			 } else {
-				time.min = time.min%10;
-			 }
-			 break;
-		 case 2:
-			 time.hour++;
-			 if (time.hour == 24) {
-				 time.hour = 0;
-			 }
-			 break;
-		 case 3:
-			 if (time.hour < 14) {
-				 time.hour += 10;
-			 } else {
-				 time.hour = time.hour + 10 - 24;
-			 }
-		 }
-	 }
+void EXTI4_IRQHandler(void) { // увеличить выбранную единицу времени
+	EXTI->PR |= 0x05;
+	if (drebezg_flag) {
+		return;
+	}
+	drebezg_flag = 1;
+	TIM7->CR1 |= TIM_CR1_CEN;
+
+	if (clock_mode && settings_mode) {
+		switch (current_setup_numb) {
+		case 0:
+			time.min++;
+			if (time.min == 60) {
+				time.min = 0;
+			}
+			break;
+		case 1:
+			if (time.min < 50) {
+				time.min += 10;
+			} else {
+				time.min = time.min % 10;
+			}
+			break;
+		case 2:
+			time.hour++;
+			if (time.hour == 24) {
+				time.hour = 0;
+			}
+			break;
+		case 3:
+			if (time.hour < 14) {
+				time.hour += 10;
+			} else {
+				time.hour = time.hour + 10 - 24;
+			}
+		}
+	}
 }
 
-void EXTI9_5_IRQHandler(void) {		// уменьшить выбранную единицу времени
-	 EXTI->PR|=0x06;
-	 if (clock_mode && settings_mode) {
-	 	switch(current_setup_numb) {
-	 		 case 0:
-	 			 if (time.min != 0) {
-	 				 time.min--;
-	 			 } else {
-	 				 time.min = 59;
-	 			 }
-	 			 break;
-	 		 case 1:
-	 			 if (time.min > 10) {
-	 				 time.min -=10;
-	 			 } else {
-	 				time.min = time.min + 50;
-	 			 }
-	 			 break;
-	 		 case 2:
-	 			 if (time.hour != 0) {
-	 				 time.hour--;
-	 			 } else {
-	 				 time.hour = 23;
-	 			 }
-	 			 break;
-	 		 case 3:
-	 			 if (time.hour > 10) {
-	 				 time.hour -= 10;
-	 			 } else {
-	 				 time.hour = 24 - (10 - time.hour);
-	 			 }
-	 		 }
-	 	 }
+void EXTI9_5_IRQHandler(void) { // уменьшить выбранную единицу времени
+	EXTI->PR |= 0x06;
+	if (drebezg_flag) {
+		return;
+	}
+	drebezg_flag = 1;
+	TIM7->CR1 |= TIM_CR1_CEN;
+
+	if (clock_mode && settings_mode) {
+		switch (current_setup_numb) {
+		case 0:
+			if (time.min != 0) {
+				time.min--;
+			} else {
+				time.min = 59;
+			}
+			break;
+		case 1:
+			if (time.min > 10) {
+				time.min -= 10;
+			} else {
+				time.min = time.min + 50;
+			}
+			break;
+		case 2:
+			if (time.hour != 0) {
+				time.hour--;
+			} else {
+				time.hour = 23;
+			}
+			break;
+		case 3:
+			if (time.hour > 10) {
+				time.hour -= 10;
+			} else {
+				time.hour = 24 - (10 - time.hour);
+			}
+		}
+	}
 }
 
-void RTC_IRQHandler(void)
-{
- 	if (++time.sec == 60) {
+void RTC_IRQHandler(void) {
+	if (++time.sec == 60) {
 		time.sec = 0;
 		if (++time.min == 60) {
 			time.min = 0;
@@ -256,121 +303,134 @@ void RTC_IRQHandler(void)
 			}
 		}
 	}
-    RTC->CRL &= ~RTC_CRL_SECF;
+	RTC->CRL &= ~RTC_CRL_SECF;
 }
 
-void initRTC(void)
-{
-  //if ((RCC->BDCR & RCC_BDCR_RTCEN) != RCC_BDCR_RTCEN) {
-    RCC->APB1ENR |= RCC_APB1ENR_PWREN | RCC_APB1ENR_BKPEN;   //enable tackts and backup
-    PWR->CR |= PWR_CR_DBP;					//enable access to backup zone
+void initRTC(void) {
+	//if ((RCC->BDCR & RCC_BDCR_RTCEN) != RCC_BDCR_RTCEN) {
+	RCC->APB1ENR |= RCC_APB1ENR_PWREN | RCC_APB1ENR_BKPEN; //enable tackts and backup
+	PWR->CR |= PWR_CR_DBP; //enable access to backup zone
 	RCC->BDCR |= RCC_BDCR_BDRST;
-	RCC->BDCR &= ~RCC_BDCR_BDRST;		//reset backup
+	RCC->BDCR &= ~RCC_BDCR_BDRST; //reset backup
 
-	RCC->BDCR |= RCC_BDCR_RTCEN | RCC_BDCR_RTCSEL_LSE;		//choose LSE for clock
-    RCC->BDCR |= RCC_BDCR_LSEON;		//start Lse
+	RCC->BDCR |= RCC_BDCR_RTCEN | RCC_BDCR_RTCSEL_LSE; //choose LSE for clock
+	RCC->BDCR |= RCC_BDCR_LSEON; //start Lse
 
-	  //while( (RCC->BDCR & RCC_BDCR_LSERDY) == 0 ){}; // Wait for LSERDY = 1 (LSE is ready)
-	while ( (RCC_GetFlagStatus(RCC_FLAG_LSERDY) == RESET) ) {
+	//while( (RCC->BDCR & RCC_BDCR_LSERDY) == 0 ){}; // Wait for LSERDY = 1 (LSE is ready)
+	while ((RCC_GetFlagStatus(RCC_FLAG_LSERDY) == RESET)) {
 		RCC_LSEConfig(RCC_LSE_ON);
 	}
-	BKP->RTCCR |= 3;    //calibrate
-    while( (RTC->CRL & RTC_CRL_RTOFF) == 0 ) ; // Poll RTOFF, wait until its value goes to ‘1’
+	BKP->RTCCR |= 3; //calibrate
+	while ((RTC->CRL & RTC_CRL_RTOFF) == 0)
+		; // Poll RTOFF, wait until its value goes to ‘1’
 
-    RTC->CRL |= RTC_CRL_CNF;		//access to write in registers
-    RTC->PRLH = 0;
-    RTC->PRLL = 0x7FFF;				 //32768 Hz
+	RTC->CRL |= RTC_CRL_CNF; //access to write in registers
+	RTC->PRLH = 0;
+	RTC->PRLL = 0x7FFF; //32768 Hz
 
-    RTC->CRH &= ~RTC_CRH_OWIE; // запретить прерывание при переполнении счётного регистра
-    RTC->CRH &= ~RTC_CRH_ALRIE; // запретить прерывание при совпадении счётного и сигнального регистра
-    RTC->CRH |= RTC_CRH_SECIE;       //прерывания только по секундным импульсам
+	RTC->CRH &= ~RTC_CRH_OWIE; // запретить прерывание при переполнении счётного регистра
+	RTC->CRH &= ~RTC_CRH_ALRIE; // запретить прерывание при совпадении счётного и сигнального регистра
+	RTC->CRH |= RTC_CRH_SECIE; //прерывания только по секундным импульсам
 
 	/* NVIC_SetPriority & NVIC_EnableIRQ defined in core_cm3.h */
-    //NVIC_SetPriority (RTC_IRQn, (1<<__NVIC_PRIO_BITS) - 1);
-    NVIC_EnableIRQ (RTC_IRQn);
+	//NVIC_SetPriority (RTC_IRQn, (1<<__NVIC_PRIO_BITS) - 1);
+	NVIC_EnableIRQ(RTC_IRQn);
 
-    RTC->CRL &= ~RTC_CRL_CNF;
-    while(  (RTC->CRL & RTC_CRL_RTOFF) == 0 ) ; // Poll RTOFF, wait until its value goes to ‘1’ to check the end of the write operation.
+	RTC->CRL &= ~RTC_CRL_CNF;
+	while ((RTC->CRL & RTC_CRL_RTOFF) == 0)
+		; // Poll RTOFF, wait until its value goes to ‘1’ to check the end of the write operation.
 
-    PWR->CR &= ~PWR_CR_DBP;
+	PWR->CR &= ~PWR_CR_DBP;
 
-  //}
+	//}
 }
 
 int main(void) {
 	GPIO_InitTypeDef PORT;
-	uint32_t temp, digit_temp, mig_cnt, mig_flag;
+	uint32_t temp, digit_temp, mig_flag;
 
 	RCC->CR |= RCC_CR_CSSON;
 
 	//Выключаем JTAG (он занимает ноги нужные нам)
-	RCC_APB2PeriphClockCmd( RCC_APB2Periph_AFIO , ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
 
 	//making tact for ports
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA , ENABLE);
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB , ENABLE);
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC , ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
 
 	//interruption is alternative function of ports
-	RCC_APB2PeriphClockCmd(RCC_APB2ENR_AFIOEN , ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2ENR_AFIOEN, ENABLE);
 
 	//by default Port A generit interrupts, we say, that 0-5 pins can generates
-	EXTI->IMR|=(EXTI_IMR_MR0 | EXTI_IMR_MR1 | EXTI_IMR_MR2 | EXTI_IMR_MR3 | EXTI_IMR_MR4 | EXTI_IMR_MR5);
+	EXTI->IMR |= (EXTI_IMR_MR0 | EXTI_IMR_MR1 | EXTI_IMR_MR2 | EXTI_IMR_MR3
+			| EXTI_IMR_MR4 | EXTI_IMR_MR5);
 
 	//interrupts when log1
-	EXTI->RTSR|=(EXTI_RTSR_TR0 | EXTI_RTSR_TR1 | EXTI_RTSR_TR2 | EXTI_RTSR_TR3| EXTI_RTSR_TR4 | EXTI_RTSR_TR5);
+	EXTI->RTSR |= (EXTI_RTSR_TR0 | EXTI_RTSR_TR1 | EXTI_RTSR_TR2 | EXTI_RTSR_TR3
+			| EXTI_RTSR_TR4 | EXTI_RTSR_TR5);
 
 	//Razreshaem interrupts
-	NVIC_EnableIRQ (EXTI0_IRQn);
-	NVIC_EnableIRQ (EXTI1_IRQn);
-	NVIC_EnableIRQ (EXTI2_IRQn);
-	NVIC_EnableIRQ (EXTI3_IRQn);
-	NVIC_EnableIRQ (EXTI4_IRQn);
-	NVIC_EnableIRQ (EXTI9_5_IRQn);
+	NVIC_EnableIRQ(EXTI0_IRQn);
+	NVIC_EnableIRQ(EXTI1_IRQn);
+	NVIC_EnableIRQ(EXTI2_IRQn);
+	NVIC_EnableIRQ(EXTI3_IRQn);
+	NVIC_EnableIRQ(EXTI4_IRQn);
+	NVIC_EnableIRQ(EXTI9_5_IRQn);
 
 	//LED init
 	PORT.GPIO_Pin = ALL_PINS; //Указываем какие ноги нужно настроить
-	PORT.GPIO_Mode = GPIO_Mode_Out_PP; 	// Настраиваем как выход Push-pull
+	PORT.GPIO_Mode = GPIO_Mode_Out_PP; // Настраиваем как выход Push-pull
 	PORT.GPIO_Speed = GPIO_Speed_2MHz;
-	GPIO_Init( IND_PORT , &PORT);
+	GPIO_Init(IND_PORT, &PORT);
 
 	PORT.GPIO_Pin = (GPIO_Pin_9 | GPIO_Pin_8);
 	PORT.GPIO_Mode = GPIO_Mode_Out_PP;
 	PORT.GPIO_Speed = GPIO_Speed_2MHz;
-	GPIO_Init( GPIOC , &PORT);
+	GPIO_Init(GPIOC, &PORT);
 
 	//enable clock
 	initRTC();
 
-	//настройка таймура
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6,ENABLE);
+	//настройка основного таймера
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6, ENABLE);
 	TIM6->PSC = 24000 - 1; // Настраиваем делитель что таймер тикал 1000 раз в секунду
-	timer_cnt = 0;			//счетчик таймера
-	TIM6->ARR = 100 ; // Чтоб прерывание случалось раз в десятую долю секунды
+	timer_cnt = 0; //счетчик таймера
+	TIM6->ARR = 100; // Чтоб прерывание случалось раз в десятую долю секунды
 	TIM6->DIER |= TIM_DIER_UIE; //разрешаем прерывание от таймера
 	NVIC_EnableIRQ(TIM6_DAC_IRQn); //Разрешение TIM6_DAC_IRQn прерывания
 
+	//настройка таймера для убирания дребезга
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7, ENABLE);
+	TIM7->PSC = 24000 - 1;
+	TIM7->ARR = 100;
+	drebezg_flag = 0;
+	TIM7->DIER |= TIM_DIER_UIE;
+	NVIC_EnableIRQ(TIM7_IRQn);
+
 	//others inits
-	clock_mode = 1;			//наоборот
+	clock_mode = 1; //наоборот
 	settings_mode = 0;
 	timer_started = 0;
 	timer_cnt = 0;
-	mig_cnt = 0;  			//счетчик для мигания
-	mig_flag = 0;
-	current_setup_numb = 0;		//выбранный номер при настройке часов
-	sec_result_num = 0;		//номер показанного результата
+	mig_cnt = 0; //счетчик для мигания
+	mig_flag = 1;
+	current_setup_numb = 0; //выбранный номер при настройке часов
+	sec_result_num = 0; //номер показанного результата
 
 	while (1) {
- 		if (clock_mode){
+		if (clock_mode) {
 
 			//Выводим цифру в нулевой разряд, единицы минут
-			temp = time.min%10;
+			temp = time.min % 10;
 			if (settings_mode && current_setup_numb == 0) {
-				if (mig_cnt != 0x5000) {
+				if (mig_cnt != 0x0038) {
 					mig_cnt++;
+					IND_PORT->ODR &= ~(D0 | D1 | D2 | D3);
 				} else {
 					mig_flag = !mig_flag;
+					mig_cnt = 0;
 				}
 				if (!mig_flag) {
 					digit_to_port(temp, D3);
@@ -381,36 +441,79 @@ int main(void) {
 			delay();
 
 			//десятки минут
-			temp = time.min/10;
-			digit_to_port(temp, D2);
+			temp = time.min / 10;
+			if (settings_mode && current_setup_numb == 1) {
+				if (mig_cnt != 0x0038) {
+					mig_cnt++;
+					IND_PORT->ODR &= ~(D0 | D1 | D2 | D3);
+				} else {
+					mig_flag = !mig_flag;
+					mig_cnt = 0;
+				}
+				if (!mig_flag) {
+					digit_to_port(temp, D2);
+				}
+			} else {
+				digit_to_port(temp, D2);
+			}
 			delay();
 
 			//единицы часов
-			temp = time.hour%10;
-			digit_to_port(temp, D1);
+			temp = time.hour % 10;
+			if (settings_mode && current_setup_numb == 2) {
+				if (mig_cnt != 0x0038) {
+					mig_cnt++;
+					IND_PORT->ODR &= ~(D0 | D1 | D2 | D3);
+				} else {
+					mig_flag = !mig_flag;
+					mig_cnt = 0;
+				}
+				if (!mig_flag) {
+					digit_to_port(temp, D1);
+				}
+			} else {
+				digit_to_port(temp, D1);
+			}
 			delay();
 
 			//десятки часов
-			temp = time.hour/10;
-			digit_to_port(temp, D0);
+			temp = time.hour / 10;
+			if (settings_mode && current_setup_numb == 3) {
+				if (mig_cnt != 0x0038) {
+					mig_cnt++;
+					IND_PORT->ODR &= ~(D0 | D1 | D2 | D3);
+				} else {
+					mig_flag = !mig_flag;
+					mig_cnt = 0;
+				}
+				if (!mig_flag) {
+					digit_to_port(temp, D0);
+				}
+			} else {
+				digit_to_port(temp, D0);
+			}
 			delay();
 		} else {
 			temp = timer_cnt;
 			//милискенды, первая цифра
-			digit_temp = temp%10;
+			digit_temp = temp % 10;
 			digit_to_port(digit_temp, D3);
+			delay();
 			//вторая
-			temp = temp/10;
-			digit_temp = temp%10;
+			temp = temp / 10;
+			digit_temp = temp % 10;
 			digit_to_port(digit_temp, D2);
+			delay();
 			//третья
-			temp = temp/10;
-			digit_temp = temp%10;
+			temp = temp / 10;
+			digit_temp = temp % 10;
 			digit_to_port(digit_temp, D1);
+			delay();
 			//четвертая
-			temp = temp/10;
-			digit_temp = temp%10;
+			temp = temp / 10;
+			digit_temp = temp % 10;
 			digit_to_port(digit_temp, D0);
+			delay();
 		}
 	}
 }
